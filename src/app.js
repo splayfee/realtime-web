@@ -9,6 +9,7 @@ angular.module('myApp').service('AppModel', function($http, $rootScope) {
   this.tasks = [];
   this.description = '';
   this.isAuthenticated = false;
+  this.isDirty = false;
 
   this.getTasks = function(user) {
 
@@ -35,6 +36,10 @@ angular.module('myApp').service('AppModel', function($http, $rootScope) {
   };
 
   this.updateTask = function(task) {
+    if (!this.isDirty) {
+      return;
+    }
+    this.isDirty = false;
     $http.put('http://localhost:3000/real-time/api/v1/tasks/' + task.id, task)
       .then(function(response) {
           // task = _.merge(task, response.data);
