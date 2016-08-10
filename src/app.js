@@ -35,8 +35,8 @@ angular.module('myApp').service('AppModel', function($http, $rootScope) {
         });
   };
 
-  this.updateTask = function(task) {
-    if (!this.isDirty) {
+  this.updateTask = function(task, forceUpdate) {
+    if (!this.isDirty && !forceUpdate) {
       return;
     }
     this.isDirty = false;
@@ -63,9 +63,32 @@ angular.module('myApp').service('AppModel', function($http, $rootScope) {
 
 
   this.changeTaskStatus = function(task) {
-    this.updateTask(task);
+    this.updateTask(task, true);
   };
 
+  this.login = function() {
+    $http.post('http://localhost:3000/real-time/api/v1/login', { email: this.email, password: this.password })
+      .then(function(response) {
+          this.isAuthenticated = true;
+          this.user = response.data;
+          $http.defaults.headers.common.Authorization = this.user.authorization;
+          this.getTasks();
+
+          // Make the connection
+          var socket = io.connect( 'http://localhost:4000', { query: 'token=' + this.user.authorization + '&user_id=' + this.user.id } );
+          socket.on('CREATE', this.handleCreateEvent);
+          socket.on('UPDATE', this.handleUpdateEvent);
+          socket.on('DELETE', this.handleDeleteEvent);
+
+        }.bind(this),
+        function(response) {
+          alert('An error occurred.' + response.data.message);
+        });
+  }
+
+  /**
+   * SOCKET EVENTS!
+   */
   this.handleCreateEvent = function(data) {
     if (data.type === 'task') {
       self.tasks.push(data.item);
@@ -90,26 +113,6 @@ angular.module('myApp').service('AppModel', function($http, $rootScope) {
     $rootScope.$apply();
   };
 
-  this.login = function() {
-    var self = this;
-    $http.post('http://localhost:3000/real-time/api/v1/login', { email: this.email, password: this.password })
-      .then(function(response) {
-          this.isAuthenticated = true;
-          this.user = response.data;
-          $http.defaults.headers.common.Authorization = this.user.authorization;
-          this.getTasks();
-
-          // Make the connection
-          var socket = io.connect( 'http://localhost:4000', { query: 'token=' + this.user.authorization + '&user_id=' + this.user.id } );
-          socket.on('CREATE', this.handleCreateEvent);
-          socket.on('UPDATE', this.handleUpdateEvent);
-          socket.on('DELETE', this.handleDeleteEvent);
-
-        }.bind(this),
-        function(response) {
-          alert('An error occurred.' + response.data.message);
-        });
-  }
 });
 
 angular.module('myApp').controller('MainController', ['AppModel', function(AppModel) {
