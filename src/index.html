@@ -28,7 +28,7 @@
 
             <ul>
                 <li ng-repeat="task in main.model.tasks | orderBy:'-updated_at'">
-                    <input class="task-input" type="text" ng-blur="main.model.updateTask(task)" ng-keypress="main.model.isDirty=true" ng-model="task.description">
+                    <input class="task-input" type="text" ng-focus="main.model.lockTask(task)" ng-blur="main.model.updateTask(task)" ng-keypress="main.model.isDirty=true" ng-model="task.description">
                     <span class="delete-task" ng-click="main.model.deleteTask(task.id)">x</span>
                     <input type="checkbox" ng-model="task.completed" ng-change="main.model.changeTaskStatus(task)">
                     <span class="task-timestamp">{{task.updated_at | date:"MM/dd/yyyy 'at' h:mm:ss a"}}</span>

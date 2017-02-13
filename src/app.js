@@ -10,6 +10,8 @@ angular.module('myApp').service('AppModel', function($http, $rootScope) {
   this.description = '';
   this.isAuthenticated = false;
   this.isDirty = false;
+  this.socket = null;
+  this.user = null;
 
   this.getTasks = function(user) {
 
@@ -18,7 +20,7 @@ angular.module('myApp').service('AppModel', function($http, $rootScope) {
               this.tasks = response.data;
           }.bind(this),
           function(response) {
-            alert('An error occurred.' + response.data.message);
+            alert('An error occurred. ' + response.data.message);
           });
 
   };
@@ -27,37 +29,34 @@ angular.module('myApp').service('AppModel', function($http, $rootScope) {
     $http.post('http://localhost:3000/real-time/api/v1/tasks', task)
       .then(function(response) {
           task = _.merge(task, response.data);
-          // this.tasks.push(task);
           this.description = '';
         }.bind(this),
         function(response) {
-          alert('An error occurred.' + response.data.message);
+          alert('An error occurred. ' + response.data.message);
         });
   };
 
   this.updateTask = function(task, forceUpdate) {
     if (!this.isDirty && !forceUpdate) {
+      this.unlockTask(task);
       return;
     }
     this.isDirty = false;
     $http.put('http://localhost:3000/real-time/api/v1/tasks/' + task.id, task)
       .then(function(response) {
-          // task = _.merge(task, response.data);
+          this.unlockTask(task);
         }.bind(this),
         function(response) {
-          alert('An error occurred.' + response.data.message);
+          alert('An error occurred. ' + response.data.message);
         });
   };
 
   this.deleteTask = function(taskId) {
     $http.delete('http://localhost:3000/real-time/api/v1/tasks/' + taskId)
       .then(function(response) {
-          //this.tasks = _.remove(this.tasks, function(task) {
-          //  return task.id !== taskId;
-          //});
         }.bind(this),
         function(response) {
-          alert('An error occurred.' + response.data.message);
+          alert('An error occurred. ' + response.data.message);
         });
   };
 
@@ -75,14 +74,14 @@ angular.module('myApp').service('AppModel', function($http, $rootScope) {
           this.getTasks();
 
           // Make the connection
-          var socket = io.connect( 'http://localhost:4000', { query: 'token=' + this.user.authorization + '&user_id=' + this.user.id } );
-          socket.on('CREATE', this.handleCreateEvent);
-          socket.on('UPDATE', this.handleUpdateEvent);
-          socket.on('DELETE', this.handleDeleteEvent);
+          this.socket = io.connect( 'http://localhost:4000', { query: 'token=' + this.user.authorization + '&user_id=' + this.user.id } );
+          this.socket.on('CREATE', this.handleCreateEvent);
+          this.socket.on('UPDATE', this.handleUpdateEvent);
+          this.socket.on('DELETE', this.handleDeleteEvent);
 
         }.bind(this),
         function(response) {
-          alert('An error occurred.' + response.data.message);
+          alert('An error occurred. ' + response.data.message);
         });
   }
 
@@ -112,6 +111,14 @@ angular.module('myApp').service('AppModel', function($http, $rootScope) {
     }
     $rootScope.$apply();
   };
+
+  this.lockTask = function(task) {
+    this.socket.emit('LOCK', { type: 'task', item: task.id, token: this.user.authorization });
+  }
+
+  this.unlockTask = function(task) {
+    this.socket.emit('UNLOCK', { type: 'task', item: task.id, token: this.user.authorization });
+  }
 
 });
 
